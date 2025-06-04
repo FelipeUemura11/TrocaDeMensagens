@@ -87,7 +87,7 @@ def index():
         if not dados or 'mensagem' not in dados:
             return jsonify({"erro": "Mensagem não fornecida"}), 400
         mensagem = dados['mensagem']
-        # Adiciona mensagem localmente (opcional, pois mensagens recebidas vêm do webhook)
+
         timestamp = datetime.now().strftime("%H:%M:%S")
         message_id = str(uuid.uuid4())[:8]
         mensagens.append({
@@ -95,8 +95,6 @@ def index():
             "timestamp": timestamp,
             "texto": mensagem
         })
-        if len(mensagens) > 100:
-            mensagens.pop(0)
         return jsonify({"status": "Mensagem recebida com sucesso!"})
 
 @app.route("/obter_chave_publica", methods=['GET'])
@@ -132,7 +130,6 @@ def webhook():
         if not verificar_hash(mensagem_descriptografada, hash_recebido):
             raise ValueError("Hash da mensagem não corresponde - possível manipulação detectada")
 
-        # Adicionar mensagem à lista com timestamp e ID único
         timestamp = datetime.now().strftime("%H:%M:%S")
         message_id = str(uuid.uuid4())[:8]  # Usa os primeiros 8 caracteres do UUID
         mensagens.append({
@@ -140,10 +137,6 @@ def webhook():
             "timestamp": timestamp,
             "texto": mensagem_descriptografada
         })
-        
-        # Limitar o número de mensagens armazenadas
-        if len(mensagens) > 100:
-            mensagens.pop(0)
 
         logger.debug(f"Mensagem recebida (Descriptografada): {mensagem_descriptografada}")
         return jsonify({"status": "Mensagem recebida e verificada com sucesso!"}), 200
