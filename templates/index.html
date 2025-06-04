@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Criptografado</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f0f2f5;
+        }
+        .chat-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 20px;
+        }
+        .chat-messages {
+            height: 400px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 10px;
+            margin-bottom: 20px;
+        }
+        .message {
+            margin-bottom: 10px;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .message.sent {
+            background-color: #e3f2fd;
+            margin-left: 20%;
+        }
+        .message.received {
+            background-color: #f5f5f5;
+            margin-right: 20%;
+        }
+        .message-input {
+            display: flex;
+            gap: 10px;
+        }
+        input[type="text"] {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #2196f3;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #1976d2;
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <h1>Chat Criptografado</h1>
+        <div class="chat-messages" id="chatMessages"></div>
+        <div class="message-input">
+            <input type="text" id="messageInput" placeholder="Digite sua mensagem...">
+            <button onclick="sendMessage()">Enviar</button>
+        </div>
+    </div>
+
+    <script>
+        let processedMessageIds = new Set();
+        let sentMessageIds = new Set();
+
+        function addMessage(message, isSent) {
+            const chatMessages = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isSent ? 'sent' : 'received'}`;
+            messageDiv.textContent = `[${message.timestamp}] ${message.texto}`;
+            messageDiv.dataset.messageId = message.id;
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+            
+            if (message) {
+                fetch('/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ mensagem: message })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status) {
+                        // O backend não retorna o ID, então vamos marcar o último ID recebido como enviado
+                        // Na próxima atualização, a mensagem mais recente será considerada enviada
+                        sentMessageIds.add('pending'); // Marcador temporário
+                        input.value = '';
+                    } else {
+                        alert('Erro ao enviar mensagem: ' + data.erro);
+                    }
+                })
+                .catch(error => {
+                    alert('Erro ao enviar mensagem: ' + error);
+                });
+            }
+        }
+
+        function checkNewMessages() {
+            fetch('/check_messages')
+            .then(response => response.json())
+            .then(data => {
+                if (data.mensagens) {
+                    const chatMessages = document.getElementById('chatMessages');
+                    chatMessages.innerHTML = '';
+                    // Se houver marcador 'pending', associar ao último ID recebido
+                    if (sentMessageIds.has('pending') && data.mensagens.length > 0) {
+                        const lastMsg = data.mensagens[data.mensagens.length - 1];
+                        sentMessageIds.delete('pending');
+                        sentMessageIds.add(lastMsg.id);
+                    }
+                    data.mensagens.forEach(msg => {
+                        const isSent = sentMessageIds.has(msg.id);
+                        addMessage(msg, isSent);
+                        processedMessageIds.add(msg.id);
+                    });
+                }
+            })
+            .catch(error => console.error('Erro ao verificar mensagens:', error));
+        }
+
+        setInterval(checkNewMessages, 2000);
+
+        document.getElementById('messageInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        checkNewMessages();
+    </script>
+</body>
+</html> 
