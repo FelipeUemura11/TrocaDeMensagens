@@ -1,4 +1,4 @@
-# servidor receptor
+# servidor receptor, recebe e descriptografa
 from flask import Flask, request, jsonify, render_template
 import logging
 import random

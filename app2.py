@@ -1,4 +1,4 @@
-# servidor remetente
+# servidor remetente, envia e criptografa
 from flask import Flask, request, jsonify, render_template
 import requests
 import logging
